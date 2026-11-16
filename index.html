@@ -214,20 +214,39 @@ function loadImgEl(src) {
     im.src = src;
   });
 }
+// Stored photos are already rotated + downscaled JPEGs. Decode them into an ImageBitmap so
+// iOS Safari can't drop the decoded pixels later (an <img> whose blob URL was revoked draws blank there).
 async function blobToDrawable(blob) {
-  const url = URL.createObjectURL(blob);
-  try { return await loadImgEl(url); }
-  finally { setTimeout(() => URL.revokeObjectURL(url), 1000); }
+  if (window.createImageBitmap) {
+    try { return await createImageBitmap(blob); } catch (e) { /* fall back below */ }
+  }
+  // fallback: keep the object URL alive for as long as the image is in use
+  const im = await loadImgEl(URL.createObjectURL(blob));
+  if (im.decode) { try { await im.decode(); } catch (e) {} }
+  return im;
 }
-// decode a picked file (Safari applies EXIF orientation), downscale, store as JPEG
+// decode a picked file via <img> (applies EXIF orientation), downscale, store as JPEG
 async function importFile(file) {
-  const src = await blobToDrawable(file);
-  const k = Math.min(1, MAX_IMG / Math.max(src.naturalWidth, src.naturalHeight));
-  const w = Math.round(src.naturalWidth * k), h = Math.round(src.naturalHeight * k);
+  const url = URL.createObjectURL(file);
+  let src;
+  try {
+    src = await loadImgEl(url);
+    if (src.decode) { try { await src.decode(); } catch (e) {} }
+  } catch (e) {
+    URL.revokeObjectURL(url);
+    throw new Error('解碼失敗（' + (file.type || '未知格式') + '）');
+  }
+  const sw = src.naturalWidth, sh = src.naturalHeight;
+  if (!sw || !sh) { URL.revokeObjectURL(url); throw new Error('照片尺寸為 0'); }
+  const k = Math.min(1, MAX_IMG / Math.max(sw, sh));
+  const w = Math.round(sw * k), h = Math.round(sh * k);
   const cv = document.createElement('canvas');
   cv.width = w; cv.height = h;
   cv.getContext('2d').drawImage(src, 0, 0, w, h);
+  URL.revokeObjectURL(url);
   const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.9));
+  cv.width = cv.height = 0; // free canvas memory right away (iOS has a tight total canvas budget)
+  if (!blob) throw new Error('轉檔失敗');
   const id = 'img_' + uid();
   await putImage(id, blob);
   imgs.set(id, await blobToDrawable(blob));
@@ -477,7 +496,7 @@ $('file').addEventListener('change', async e => {
       cur.cells[order[k]] = { img: id, z: 1, ox: 0, oy: 0 };
       render();
     } catch (err) {
-      $('saved').textContent = '⚠️ 有照片讀不進來';
+      $('saved').textContent = '⚠️ 有照片讀不進來：' + (err && err.message || err);
     }
   }
   changed();

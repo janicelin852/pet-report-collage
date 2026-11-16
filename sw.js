@@ -1,5 +1,5 @@
 // Offline cache. Bump VERSION on every release so phones pick up the new files.
-const VERSION = 'v1';
+const VERSION = 'v2';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-180.png', 'icons/icon-512.png', 'fonts/Huninn.ttf'];
 
 self.addEventListener('install', e => {
