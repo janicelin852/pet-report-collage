@@ -1,0 +1,778 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="回報組圖">
+<meta name="theme-color" content="#F4F8F2">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<title>回報組圖</title>
+<style>
+@font-face{font-family:Huninn;src:url(fonts/Huninn.ttf) format('truetype');font-display:swap}
+:root{--bg:#F4F8F2;--panel:#fff;--ink:#23402B;--muted:#6B8571;--accent:#3E7B4F;--accent-soft:#DCEFD9;--line:#D5E3D3;--danger:#B4483C}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:-apple-system,"PingFang TC",sans-serif;overscroll-behavior:none;-webkit-user-select:none;user-select:none}
+body{padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;padding:0}
+.view{display:none;height:100%;flex-direction:column}
+.view.on{display:flex}
+header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px}
+h1{font-size:20px;margin:0;font-family:Huninn,-apple-system,sans-serif}
+.btn{background:var(--accent);color:#fff;border-radius:12px;padding:10px 16px;font-weight:600;font-size:15px}
+.btn.ghost{background:var(--accent-soft);color:var(--accent)}
+.btn.danger{background:none;color:var(--danger)}
+.list{flex:1;overflow:auto;padding:4px 16px 24px;display:grid;grid-template-columns:repeat(2,1fr);gap:12px;align-content:start}
+.card{background:var(--panel);border-radius:14px;overflow:hidden;border:1px solid var(--line)}
+.card img{display:block;width:100%;aspect-ratio:3/4;object-fit:contain;background:#fff}
+.card .meta{padding:8px 10px;font-size:12px;color:var(--muted);display:flex;justify-content:space-between;align-items:center}
+.card .del{color:var(--danger);font-size:12px;padding:4px 2px}
+.empty{grid-column:1/-1;text-align:center;color:var(--muted);padding:60px 0;line-height:1.9}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;gap:8px}
+.back{font-size:15px;color:var(--accent);padding:8px 4px}
+.saved{font-size:12px;color:var(--muted)}
+.stage{flex:1;display:flex;align-items:center;justify-content:center;padding:6px 12px;min-height:0}
+#c{touch-action:none;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.08);-webkit-touch-callout:none}
+.tools{background:var(--panel);border-top:1px solid var(--line);padding:6px 6px 8px}
+.row{display:flex;gap:8px;overflow-x:auto;padding:4px 6px;align-items:center;scrollbar-width:none}
+.row::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:14px;background:#fff}
+.chip.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);font-weight:600}
+.chip.primary{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600}
+.chip.warn{color:var(--danger)}
+.sep{flex:none;width:1px;height:24px;background:var(--line)}
+.lay{flex:none;width:42px;height:52px;border:2px solid var(--line);border-radius:8px;padding:3px;background:#fff}
+.lay.on{border-color:var(--accent)}
+.lay svg{width:100%;height:100%;display:block}
+.hint{font-size:12px;color:var(--muted);padding:2px 10px 0;min-height:18px}
+.ctx{display:none}
+.ctx.on{display:flex}
+.sheet{position:fixed;inset:0;background:rgba(20,40,25,.35);display:none;align-items:flex-end;z-index:10}
+.sheet.on{display:flex}
+.sheet .box{background:#fff;width:100%;border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom))}
+.sheet h3{margin:0 0 10px;font-size:15px}
+textarea{width:100%;font:18px/1.5 Huninn,"PingFang TC",sans-serif;border:1px solid var(--line);border-radius:10px;padding:10px;resize:none;color:var(--ink);-webkit-user-select:text;user-select:text}
+.field{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:14px;color:var(--muted)}
+input[type=range]{flex:1;accent-color:var(--accent)}
+.sw{width:34px;height:34px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px var(--line);flex:none;display:flex;align-items:center;justify-content:center;font:14px Huninn,sans-serif}
+.sw.on{box-shadow:0 0 0 2px var(--ink)}
+.acts{display:flex;gap:8px;justify-content:space-between;margin-top:16px;align-items:center}
+.preview{position:fixed;inset:0;background:rgba(15,25,18,.92);display:none;flex-direction:column;z-index:20;padding:env(safe-area-inset-top) 16px calc(16px + env(safe-area-inset-bottom))}
+.preview.on{display:flex}
+.preview .pimg{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:12px 0}
+.preview img{max-width:100%;max-height:100%;-webkit-touch-callout:default;-webkit-user-select:auto;user-select:auto}
+.preview p{color:#cfe3d2;font-size:13px;text-align:center;margin:0 0 10px}
+.preview .acts{margin:0}
+.preview .btn{flex:1;text-align:center}
+</style>
+</head>
+<body>
+
+<section class="view on" id="home">
+  <header><h1>回報組圖</h1><button class="btn" id="newBtn">＋ 新組圖</button></header>
+  <div class="list" id="list"></div>
+</section>
+
+<section class="view" id="editor">
+  <div class="topbar">
+    <button class="back" id="backBtn">‹ 草稿</button>
+    <span class="saved" id="saved">已自動儲存</span>
+    <button class="btn" id="exportBtn">存圖</button>
+  </div>
+  <div class="stage" id="stage"><canvas id="c"></canvas></div>
+  <div class="tools">
+    <div class="hint" id="hint"></div>
+    <div class="row ctx on" id="mainRow">
+      <button class="chip primary" id="addText">＋字</button>
+      <span class="sep"></span>
+      <div class="row" id="layRow" style="padding:0"></div>
+    </div>
+    <div class="row ctx on" id="optRow">
+      <button class="chip" data-ratio="3:4">3:4</button>
+      <button class="chip" data-ratio="1:1">1:1</button>
+      <button class="chip" data-ratio="9:16">9:16</button>
+      <span class="sep"></span>
+      <span class="saved">間距</span>
+      <button class="chip" data-gap="無">無</button>
+      <button class="chip" data-gap="細">細</button>
+      <button class="chip" data-gap="粗">粗</button>
+    </div>
+    <div class="row ctx" id="cellRow">
+      <button class="chip" id="replaceBtn">換照片</button>
+      <button class="chip" id="swapBtn">交換位置</button>
+      <button class="chip" id="resetBtn">重設取景</button>
+      <button class="chip warn" id="removeBtn">移除照片</button>
+      <span class="sep"></span>
+      <button class="chip on" id="doneCell">完成</button>
+    </div>
+  </div>
+</section>
+
+<div class="sheet" id="labelSheet">
+  <div class="box">
+    <h3>文字</h3>
+    <textarea id="labelText" rows="3" placeholder="例：可可 早 離胺酸 針筒0.5ml"></textarea>
+    <div class="field">大小 <input type="range" id="labelSize" min="0.5" max="2.2" step="0.05"></div>
+    <div class="field">樣式 <span id="styleRow" style="display:flex;gap:10px"></span></div>
+    <div class="acts">
+      <button class="btn danger" id="labelDel">刪除</button>
+      <button class="btn" id="labelDone">完成</button>
+    </div>
+  </div>
+</div>
+
+<div class="preview" id="preview">
+  <div class="pimg"><img id="previewImg" alt="組圖預覽"></div>
+  <p>也可以長按圖片「加入照片」</p>
+  <div class="acts">
+    <button class="btn ghost" id="closePreview">返回編輯</button>
+    <button class="btn" id="shareBtn">分享 / 儲存</button>
+  </div>
+</div>
+
+<input type="file" id="file" accept="image/*" multiple hidden>
+
+<script>
+(() => {
+'use strict';
+
+// ---------- constants ----------
+const LAYOUTS = [
+  { id: '2h',    cells: [[0,0,.5,1],[.5,0,.5,1]] },
+  { id: '2v',    cells: [[0,0,1,.5],[0,.5,1,.5]] },
+  { id: '1-2',   cells: [[0,0,1,.5],[0,.5,.5,.5],[.5,.5,.5,.5]] },
+  { id: 'L1R2',  cells: [[0,0,.5,1],[.5,0,.5,.5],[.5,.5,.5,.5]] },
+  { id: '2x2',   cells: [[0,0,.5,.5],[.5,0,.5,.5],[0,.5,.5,.5],[.5,.5,.5,.5]] },
+  { id: '1-4',   cells: [[0,0,1,.4],[0,.4,.5,.3],[.5,.4,.5,.3],[0,.7,.5,.3],[.5,.7,.5,.3]] },
+  { id: '2-1-2', cells: [[0,0,1/3,.5],[0,.5,1/3,.5],[1/3,0,1/3,1],[2/3,0,1/3,.5],[2/3,.5,1/3,.5]] },
+  { id: '2x3',   cells: [[0,0,.5,1/3],[.5,0,.5,1/3],[0,1/3,.5,1/3],[.5,1/3,.5,1/3],[0,2/3,.5,1/3],[.5,2/3,.5,1/3]] },
+];
+const RATIOS = { '3:4': [1080,1440], '1:1': [1080,1080], '9:16': [1080,1920] };
+const GAPS = { '無': 0, '細': 12, '粗': 28 };
+const STYLES = [
+  { bg: '#DCEFD9', fg: '#2F5D3A' },
+  { bg: '#3E7B4F', fg: '#FFFFFF' },
+  { bg: 'rgba(255,255,255,0.92)', fg: '#2F5D3A' },
+];
+const FONT = 'Huninn, "PingFang TC", sans-serif';
+const BASE_FONT = 44;           // label font px at 1080 wide, size 1
+const KEEP_EXPORTED_MS = 7 * 24 * 3600 * 1000;
+const MAX_IMG = 2048;
+
+const $ = id => document.getElementById(id);
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const ls = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} },
+};
+
+// ---------- IndexedDB ----------
+let db;
+function openDB() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open('report-collage', 1);
+    r.onupgradeneeded = () => {
+      const d = r.result;
+      d.createObjectStore('drafts', { keyPath: 'id' });
+      d.createObjectStore('images');
+    };
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+function idb(store, mode, fn) {
+  return new Promise((res, rej) => {
+    const t = db.transaction(store, mode);
+    const req = fn(t.objectStore(store));
+    t.oncomplete = () => res(req ? req.result : undefined);
+    t.onerror = () => rej(t.error);
+    t.onabort = () => rej(t.error);
+  });
+}
+const getAllDrafts = () => idb('drafts', 'readonly', s => s.getAll());
+const getDraft = id => idb('drafts', 'readonly', s => s.get(id));
+const putDraft = d => idb('drafts', 'readwrite', s => s.put(d));
+const delDraft = id => idb('drafts', 'readwrite', s => s.delete(id));
+const putImage = (id, blob) => idb('images', 'readwrite', s => s.put(blob, id));
+const getImage = id => idb('images', 'readonly', s => s.get(id));
+const imageKeys = () => idb('images', 'readonly', s => s.getAllKeys());
+const delImage = id => idb('images', 'readwrite', s => s.delete(id));
+
+// ---------- images ----------
+const imgs = new Map(); // id -> ImageBitmap | HTMLImageElement
+
+function loadImgEl(src) {
+  return new Promise((res, rej) => {
+    const im = new Image();
+    im.onload = () => res(im);
+    im.onerror = () => rej(new Error('image decode failed'));
+    im.src = src;
+  });
+}
+async function blobToDrawable(blob) {
+  const url = URL.createObjectURL(blob);
+  try { return await loadImgEl(url); }
+  finally { setTimeout(() => URL.revokeObjectURL(url), 1000); }
+}
+// decode a picked file (Safari applies EXIF orientation), downscale, store as JPEG
+async function importFile(file) {
+  const src = await blobToDrawable(file);
+  const k = Math.min(1, MAX_IMG / Math.max(src.naturalWidth, src.naturalHeight));
+  const w = Math.round(src.naturalWidth * k), h = Math.round(src.naturalHeight * k);
+  const cv = document.createElement('canvas');
+  cv.width = w; cv.height = h;
+  cv.getContext('2d').drawImage(src, 0, 0, w, h);
+  const blob = await new Promise(r => cv.toBlob(r, 'image/jpeg', 0.9));
+  const id = 'img_' + uid();
+  await putImage(id, blob);
+  imgs.set(id, await blobToDrawable(blob));
+  return id;
+}
+async function ensureImages(d) {
+  for (const c of d.cells) {
+    if (c.img && !imgs.has(c.img)) {
+      const b = await getImage(c.img);
+      if (b) imgs.set(c.img, await blobToDrawable(b));
+    }
+  }
+}
+
+// ---------- draft model ----------
+function newDraft() {
+  return {
+    id: 'd_' + uid(), created: Date.now(), updated: Date.now(),
+    ratio: '3:4', layout: '2x2', gap: '細',
+    cells: [], labels: [], thumb: '', exportedAt: 0,
+  };
+}
+const layoutOf = d => LAYOUTS.find(l => l.id === d.layout) || LAYOUTS[0];
+function syncCells(d) {
+  const n = layoutOf(d).cells.length;
+  while (d.cells.length < n) d.cells.push({ img: null, z: 1, ox: 0, oy: 0 });
+}
+function cellRects(d, W, H) {
+  const g = GAPS[d.gap] ?? 12;
+  return layoutOf(d).cells.map(([x, y, w, h]) => ({
+    x: g / 2 + x * (W - g) + g / 2,
+    y: g / 2 + y * (H - g) + g / 2,
+    w: w * (W - g) - g,
+    h: h * (H - g) - g,
+  }));
+}
+
+// ---------- drawing ----------
+function photoGeom(r, c, im) {
+  const s = Math.max(r.w / im.width, r.h / im.height) * c.z;
+  const dw = im.width * s, dh = im.height * s;
+  const mx = (dw - r.w) / 2, my = (dh - r.h) / 2;
+  return { dw, dh, mx, my };
+}
+function clampOffset(r, c) {
+  const im = imgs.get(c.img);
+  if (!im) return;
+  const { mx, my } = photoGeom(r, c, im);
+  c.ox = r.w ? clamp(c.ox * r.w, -mx, mx) / r.w : 0;
+  c.oy = r.h ? clamp(c.oy * r.h, -my, my) / r.h : 0;
+}
+function labelMetrics(ctx, lb) {
+  const fs = BASE_FONT * lb.s;
+  ctx.font = `${fs}px ${FONT}`;
+  const lines = (lb.text || ' ').split('\n');
+  const lh = fs * 1.32;
+  const padX = fs * 0.5, padY = fs * 0.32;
+  const tw = Math.max(...lines.map(t => ctx.measureText(t).width));
+  return { fs, lines, lh, padX, padY, w: tw + padX * 2, h: lines.length * lh + padY * 2 - (lh - fs) };
+}
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+function draw(ctx, d, W, H, forExport, noSel) {
+  const showSel = !forExport && !noSel;
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, W, H);
+  const rects = cellRects(d, W, H);
+  rects.forEach((r, i) => {
+    const c = d.cells[i];
+    ctx.save();
+    ctx.beginPath(); ctx.rect(r.x, r.y, r.w, r.h); ctx.clip();
+    const im = c && c.img && imgs.get(c.img);
+    if (im) {
+      const { dw, dh, mx, my } = photoGeom(r, c, im);
+      const ox = clamp(c.ox * r.w, -mx, mx), oy = clamp(c.oy * r.h, -my, my);
+      ctx.drawImage(im, r.x + (r.w - dw) / 2 + ox, r.y + (r.h - dh) / 2 + oy, dw, dh);
+    } else if (!forExport) {
+      ctx.fillStyle = '#EEF4EC';
+      ctx.fillRect(r.x, r.y, r.w, r.h);
+      ctx.fillStyle = '#8FAE95';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      const fs = Math.min(r.w, r.h) * 0.18;
+      ctx.font = `${fs}px ${FONT}`;
+      ctx.fillText('＋', r.x + r.w / 2, r.y + r.h / 2 - fs * 0.35);
+      ctx.font = `${Math.max(22, fs * 0.38)}px ${FONT}`;
+      ctx.fillText('放照片', r.x + r.w / 2, r.y + r.h / 2 + fs * 0.55);
+    }
+    ctx.restore();
+    if (showSel && i === ui.sel) {
+      ctx.save();
+      ctx.strokeStyle = ui.swap ? '#E0A030' : '#3E7B4F';
+      ctx.lineWidth = 8;
+      ctx.strokeRect(r.x + 4, r.y + 4, r.w - 8, r.h - 8);
+      ctx.restore();
+    }
+  });
+  d.labels.forEach(lb => {
+    const m = labelMetrics(ctx, lb);
+    const st = STYLES[lb.st] || STYLES[0];
+    const x = lb.x * W, y = lb.y * H;
+    lb._box = { x, y, w: m.w, h: m.h };
+    ctx.fillStyle = st.bg;
+    roundRect(ctx, x, y, m.w, m.h, m.fs * 0.42);
+    ctx.fill();
+    ctx.fillStyle = st.fg;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    m.lines.forEach((t, i) => ctx.fillText(t, x + m.padX, y + m.padY + i * m.lh + m.fs * 0.06));
+    if (showSel && lb.id === ui.labelSel) {
+      ctx.save();
+      ctx.setLineDash([10, 8]); ctx.strokeStyle = '#3E7B4F'; ctx.lineWidth = 3;
+      roundRect(ctx, x - 6, y - 6, m.w + 12, m.h + 12, m.fs * 0.5); ctx.stroke();
+      ctx.restore();
+    }
+  });
+}
+
+// ---------- editor state ----------
+let cur = null;            // current draft
+const ui = { sel: -1, swap: false, labelSel: null, view: { W: 1080, H: 1440, k: 1 } };
+const cv = $('c'), cx = cv.getContext('2d');
+
+function fitCanvas() {
+  if (!cur) return;
+  const [W, H] = RATIOS[cur.ratio];
+  const st = $('stage');
+  const aw = st.clientWidth - 24, ah = st.clientHeight - 12;
+  const k = Math.min(aw / W, ah / H);
+  const cw = Math.floor(W * k), ch = Math.floor(H * k);
+  const dpr = Math.min(3, window.devicePixelRatio || 1);
+  cv.style.width = cw + 'px'; cv.style.height = ch + 'px';
+  cv.width = Math.round(cw * dpr); cv.height = Math.round(ch * dpr);
+  ui.view = { W, H, k: (cw * dpr) / W };
+  render();
+}
+function render() {
+  if (!cur) return;
+  const { W, H, k } = ui.view;
+  cx.setTransform(k, 0, 0, k, 0, 0);
+  draw(cx, cur, W, H, false);
+}
+
+// ---------- autosave ----------
+let saveTimer = null;
+function changed() {
+  render();
+  $('saved').textContent = '儲存中…';
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveNow, 350);
+}
+async function saveNow() {
+  clearTimeout(saveTimer);
+  if (!cur) return;
+  cur.updated = Date.now();
+  cur.thumb = makeThumb(cur);
+  const copy = JSON.parse(JSON.stringify(cur, (k, v) => (k === '_box' ? undefined : v)));
+  try {
+    await putDraft(copy);
+    $('saved').textContent = '已自動儲存 ' + new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' });
+  } catch (e) {
+    $('saved').textContent = '⚠️ 儲存失敗';
+  }
+}
+function makeThumb(d) {
+  const [W, H] = RATIOS[d.ratio];
+  const t = document.createElement('canvas');
+  const k = 300 / W;
+  t.width = 300; t.height = Math.round(H * k);
+  const c = t.getContext('2d');
+  c.setTransform(k, 0, 0, k, 0, 0);
+  draw(c, d, W, H, false, true);
+  return t.toDataURL('image/jpeg', 0.7);
+}
+
+// ---------- toolbar UI ----------
+function layoutIcon(l) {
+  const W = 30, H = 40, g = 2;
+  const rs = l.cells.map(([x, y, w, h]) =>
+    `<rect x="${x * W + g / 2}" y="${y * H + g / 2}" width="${w * W - g}" height="${h * H - g}" rx="1.5" fill="#B9D4BC"/>`).join('');
+  return `<svg viewBox="0 0 ${W} ${H}">${rs}</svg>`;
+}
+function buildLayoutRow() {
+  $('layRow').innerHTML = LAYOUTS.map(l =>
+    `<button class="lay" data-lay="${l.id}" aria-label="版型 ${l.cells.length} 格">${layoutIcon(l)}</button>`).join('');
+}
+function refreshTools() {
+  document.querySelectorAll('[data-lay]').forEach(b => b.classList.toggle('on', b.dataset.lay === cur.layout));
+  document.querySelectorAll('[data-ratio]').forEach(b => b.classList.toggle('on', b.dataset.ratio === cur.ratio));
+  document.querySelectorAll('[data-gap]').forEach(b => b.classList.toggle('on', b.dataset.gap === cur.gap));
+  const cellMode = ui.sel >= 0;
+  $('cellRow').classList.toggle('on', cellMode);
+  $('mainRow').classList.toggle('on', !cellMode);
+  $('optRow').classList.toggle('on', !cellMode);
+  $('hint').textContent = ui.swap ? '點另一格，跟這格交換照片'
+    : cellMode ? '拖曳移動取景・兩指縮放'
+    : '點空格放照片・拖曳照片調整・點文字可編輯';
+}
+$('layRow').addEventListener('click', e => {
+  const b = e.target.closest('[data-lay]'); if (!b) return;
+  cur.layout = b.dataset.lay; syncCells(cur); ui.sel = -1; ui.swap = false;
+  refreshTools(); changed();
+});
+document.querySelectorAll('[data-ratio]').forEach(b => b.addEventListener('click', () => {
+  cur.ratio = b.dataset.ratio; refreshTools(); fitCanvas(); changed();
+}));
+document.querySelectorAll('[data-gap]').forEach(b => b.addEventListener('click', () => {
+  cur.gap = b.dataset.gap; refreshTools(); changed();
+}));
+function selectCell(i) { ui.sel = i; ui.swap = false; refreshTools(); render(); }
+$('doneCell').onclick = () => selectCell(-1);
+$('replaceBtn').onclick = () => pickPhotos(ui.sel, true);
+$('swapBtn').onclick = () => { ui.swap = true; refreshTools(); render(); };
+$('resetBtn').onclick = () => { const c = cur.cells[ui.sel]; c.z = 1; c.ox = 0; c.oy = 0; changed(); };
+$('removeBtn').onclick = () => { cur.cells[ui.sel] = { img: null, z: 1, ox: 0, oy: 0 }; selectCell(-1); changed(); };
+
+// ---------- photo picking ----------
+let pickTarget = { i: 0, replace: false };
+function pickPhotos(i, replace) {
+  pickTarget = { i, replace };
+  const f = $('file');
+  f.multiple = !replace;
+  f.value = '';
+  f.click();
+}
+$('file').addEventListener('change', async e => {
+  const files = [...e.target.files];
+  if (!files.length) return;
+  $('saved').textContent = '讀取照片…';
+  const n = layoutOf(cur).cells.length;
+  // target order: the tapped cell, then empty cells after it, then empty cells before it
+  const order = [pickTarget.i];
+  if (!pickTarget.replace) {
+    for (let k = 1; k < n; k++) {
+      const j = (pickTarget.i + k) % n;
+      if (!cur.cells[j].img) order.push(j);
+    }
+  }
+  for (let k = 0; k < files.length && k < order.length; k++) {
+    try {
+      const id = await importFile(files[k]);
+      cur.cells[order[k]] = { img: id, z: 1, ox: 0, oy: 0 };
+      render();
+    } catch (err) {
+      $('saved').textContent = '⚠️ 有照片讀不進來';
+    }
+  }
+  changed();
+});
+
+// ---------- labels ----------
+let editing = null;
+function buildStyleRow() {
+  $('styleRow').innerHTML = STYLES.map((s, i) =>
+    `<button class="sw" data-st="${i}" style="background:${s.bg};color:${s.fg}">字</button>`).join('');
+}
+function openLabel(lb) {
+  editing = lb; ui.labelSel = lb.id; render();
+  $('labelText').value = lb.text;
+  $('labelSize').value = lb.s;
+  document.querySelectorAll('[data-st]').forEach(b => b.classList.toggle('on', +b.dataset.st === lb.st));
+  $('labelSheet').classList.add('on');
+  setTimeout(() => $('labelText').focus(), 60);
+}
+function closeLabel() {
+  if (editing && !editing.text.trim()) cur.labels = cur.labels.filter(l => l !== editing);
+  editing = null; ui.labelSel = null;
+  $('labelSheet').classList.remove('on');
+  $('labelText').blur();
+  changed();
+}
+$('addText').onclick = () => {
+  const lb = { id: 'l_' + uid(), text: '', x: 0.05, y: Math.min(0.85, 0.05 + cur.labels.length * 0.09), s: 1, st: 0 };
+  cur.labels.push(lb);
+  openLabel(lb);
+};
+$('labelText').addEventListener('input', e => { editing.text = e.target.value; changed(); });
+$('labelSize').addEventListener('input', e => { editing.s = +e.target.value; keepLabelInside(editing); changed(); });
+$('styleRow').addEventListener('click', e => {
+  const b = e.target.closest('[data-st]'); if (!b) return;
+  editing.st = +b.dataset.st;
+  document.querySelectorAll('[data-st]').forEach(x => x.classList.toggle('on', x === b));
+  changed();
+});
+$('labelDone').onclick = closeLabel;
+$('labelDel').onclick = () => { editing.text = ''; closeLabel(); };
+$('labelSheet').addEventListener('click', e => { if (e.target === $('labelSheet')) closeLabel(); });
+function keepLabelInside(lb) {
+  const { W, H } = ui.view;
+  const m = labelMetrics(cx, lb);
+  lb.x = clamp(lb.x, 0, Math.max(0, (W - m.w) / W));
+  lb.y = clamp(lb.y, 0, Math.max(0, (H - m.h) / H));
+}
+
+// ---------- touch / pointer ----------
+const ptrs = new Map();
+let gest = null;
+function toCanvas(e) {
+  const b = cv.getBoundingClientRect();
+  return { x: (e.clientX - b.left) * ui.view.W / b.width, y: (e.clientY - b.top) * ui.view.H / b.height };
+}
+function hitLabel(p) {
+  for (let i = cur.labels.length - 1; i >= 0; i--) {
+    const b = cur.labels[i]._box;
+    if (b && p.x >= b.x - 10 && p.x <= b.x + b.w + 10 && p.y >= b.y - 10 && p.y <= b.y + b.h + 10) return cur.labels[i];
+  }
+  return null;
+}
+function hitCell(p) {
+  const rs = cellRects(cur, ui.view.W, ui.view.H);
+  return rs.findIndex(r => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h);
+}
+const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
+cv.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  cv.setPointerCapture(e.pointerId);
+  const p = toCanvas(e);
+  ptrs.set(e.pointerId, p);
+  if (ptrs.size === 1) {
+    const lb = hitLabel(p);
+    if (lb) { gest = { type: 'label', lb, start: p, x0: lb.x, y0: lb.y, moved: false }; return; }
+    const i = hitCell(p);
+    gest = { type: 'cell', i, start: p, last: p, moved: false };
+  } else if (ptrs.size === 2) {
+    const [a, b] = [...ptrs.values()];
+    if (gest && gest.type === 'label') {
+      gest = { type: 'lpinch', lb: gest.lb, d0: dist(a, b), s0: gest.lb.s };
+    } else {
+      const i = gest && gest.i >= 0 ? gest.i : hitCell(a);
+      const c = cur.cells[i];
+      gest = c && c.img ? { type: 'pinch', i, d0: dist(a, b), z0: c.z } : null;
+    }
+  }
+});
+cv.addEventListener('pointermove', e => {
+  if (!ptrs.has(e.pointerId) || !gest) return;
+  const p = toCanvas(e);
+  ptrs.set(e.pointerId, p);
+  const { W, H } = ui.view;
+  if (gest.type === 'label') {
+    if (dist(p, gest.start) > 8) gest.moved = true;
+    if (!gest.moved) return;
+    gest.lb.x = gest.x0 + (p.x - gest.start.x) / W;
+    gest.lb.y = gest.y0 + (p.y - gest.start.y) / H;
+    keepLabelInside(gest.lb);
+    render();
+  } else if (gest.type === 'cell') {
+    if (dist(p, gest.start) > 8) gest.moved = true;
+    const c = cur.cells[gest.i];
+    if (!gest.moved || !c || !c.img || ui.swap) return;
+    const r = cellRects(cur, W, H)[gest.i];
+    c.ox += (p.x - gest.last.x) / r.w;
+    c.oy += (p.y - gest.last.y) / r.h;
+    clampOffset(r, c);
+    gest.last = p;
+    render();
+  } else if (gest.type === 'pinch' && ptrs.size >= 2) {
+    const [a, b] = [...ptrs.values()];
+    const c = cur.cells[gest.i];
+    c.z = clamp(gest.z0 * dist(a, b) / gest.d0, 1, 5);
+    clampOffset(cellRects(cur, W, H)[gest.i], c);
+    render();
+  } else if (gest.type === 'lpinch' && ptrs.size >= 2) {
+    const [a, b] = [...ptrs.values()];
+    gest.lb.s = clamp(gest.s0 * dist(a, b) / gest.d0, 0.5, 2.2);
+    keepLabelInside(gest.lb);
+    render();
+  }
+});
+function endPointer(e, cancelled) {
+  if (!ptrs.has(e.pointerId)) return;
+  ptrs.delete(e.pointerId);
+  const g = gest;
+  if (ptrs.size > 0) {
+    // one finger left after a pinch: continue as a pan from here, no tap
+    if (g && (g.type === 'pinch')) {
+      const p = [...ptrs.values()][0];
+      gest = { type: 'cell', i: g.i, start: p, last: p, moved: true };
+    } else if (g && g.type === 'lpinch') {
+      gest = null;
+    }
+    return;
+  }
+  gest = null;
+  if (!g) return;
+  if (g.type === 'label') {
+    if (!g.moved && !cancelled) openLabel(g.lb); else changed();
+    return;
+  }
+  if (g.type === 'pinch' || g.type === 'lpinch') { changed(); return; }
+  if (g.type === 'cell') {
+    if (g.moved) { changed(); return; }
+    if (cancelled || g.i < 0) return;
+    if (ui.swap && ui.sel >= 0) {
+      if (g.i !== ui.sel) {
+        const t = cur.cells[ui.sel]; cur.cells[ui.sel] = cur.cells[g.i]; cur.cells[g.i] = t;
+        [ui.sel, g.i].forEach(j => { const c = cur.cells[j]; if (c.img) { c.ox = 0; c.oy = 0; } });
+      }
+      selectCell(-1); changed();
+      return;
+    }
+    const c = cur.cells[g.i];
+    if (!c.img) { selectCell(-1); pickPhotos(g.i, false); }
+    else selectCell(ui.sel === g.i ? -1 : g.i);
+  }
+}
+cv.addEventListener('pointerup', e => endPointer(e, false));
+cv.addEventListener('pointercancel', e => endPointer(e, true));
+
+// ---------- export ----------
+let exportFile = null, exportUrl = null;
+$('exportBtn').onclick = async () => {
+  ui.sel = -1; ui.swap = false; refreshTools();
+  await saveNow();
+  const text = cur.labels.map(l => l.text).join('');
+  try { await document.fonts.load(`44px Huninn`, text || '字'); } catch (e) {}
+  const [W, H] = RATIOS[cur.ratio];
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  draw(c.getContext('2d'), cur, W, H, true);
+  const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92));
+  const d = new Date();
+  const stamp = `${d.getMonth() + 1}${String(d.getDate()).padStart(2, '0')}-${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}`;
+  exportFile = new File([blob], `回報-${stamp}.jpg`, { type: 'image/jpeg' });
+  if (exportUrl) URL.revokeObjectURL(exportUrl);
+  exportUrl = URL.createObjectURL(blob);
+  $('previewImg').src = exportUrl;
+  $('preview').classList.add('on');
+  render();
+};
+$('shareBtn').onclick = async () => {
+  if (!exportFile) return;
+  if (navigator.canShare && navigator.canShare({ files: [exportFile] })) {
+    try {
+      await navigator.share({ files: [exportFile] });
+      markExported();
+    } catch (e) { /* user closed the share sheet */ }
+  } else {
+    const a = document.createElement('a');
+    a.href = exportUrl; a.download = exportFile.name;
+    document.body.appendChild(a); a.click(); a.remove();
+    markExported();
+  }
+};
+function markExported() { cur.exportedAt = Date.now(); saveNow(); }
+$('closePreview').onclick = () => $('preview').classList.remove('on');
+
+// ---------- views / navigation ----------
+function show(view) {
+  $('home').classList.toggle('on', view === 'home');
+  $('editor').classList.toggle('on', view === 'editor');
+}
+async function openEditor(d, push) {
+  cur = d; syncCells(cur);
+  ui.sel = -1; ui.swap = false; ui.labelSel = null;
+  ls.set('editing', d.id);
+  show('editor');
+  refreshTools();
+  await ensureImages(cur);
+  fitCanvas();
+  $('saved').textContent = '已自動儲存';
+  if (push) history.pushState({ ed: d.id }, '');
+}
+async function goHome() {
+  if (cur) await saveNow();
+  cur = null;
+  ls.del('editing');
+  $('labelSheet').classList.remove('on');
+  $('preview').classList.remove('on');
+  show('home');
+  renderList();
+}
+$('backBtn').onclick = () => { if (history.state && history.state.ed) history.back(); else goHome(); };
+window.addEventListener('popstate', () => { if (cur) goHome(); });
+$('newBtn').onclick = async () => { const d = newDraft(); syncCells(d); await putDraft(d); openEditor(d, true); };
+
+async function renderList() {
+  const ds = (await getAllDrafts()).sort((a, b) => b.updated - a.updated);
+  const L = $('list');
+  if (!ds.length) {
+    L.innerHTML = '<div class="empty">還沒有組圖<br>按右上角「＋ 新組圖」開始<br><small>做到一半關掉也不會不見，回來會自動接著做</small></div>';
+    return;
+  }
+  L.innerHTML = ds.map(d => {
+    const t = new Date(d.updated);
+    const when = `${t.getMonth() + 1}/${t.getDate()} ${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`;
+    const tag = d.exportedAt ? '已存圖' : '草稿';
+    return `<div class="card" data-id="${d.id}">
+      ${d.thumb ? `<img src="${d.thumb}" alt="">` : '<img alt="">'}
+      <div class="meta"><span>${when}・${tag}</span><button class="del" data-del="${d.id}">刪除</button></div></div>`;
+  }).join('');
+}
+$('list').addEventListener('click', async e => {
+  const del = e.target.closest('[data-del]');
+  if (del) {
+    if (confirm('刪除這份組圖？')) { await delDraft(del.dataset.del); await cleanupImages(); renderList(); }
+    return;
+  }
+  const card = e.target.closest('.card');
+  if (card) { const d = await getDraft(card.dataset.id); if (d) openEditor(d, true); }
+});
+
+// ---------- housekeeping ----------
+async function cleanup() {
+  const now = Date.now();
+  for (const d of await getAllDrafts()) {
+    // only drafts that were exported and not touched since; never-exported drafts are kept forever
+    if (d.exportedAt && d.updated <= d.exportedAt + 60000 && now - d.exportedAt > KEEP_EXPORTED_MS) await delDraft(d.id);
+  }
+  await cleanupImages();
+}
+async function cleanupImages() {
+  const used = new Set();
+  (await getAllDrafts()).forEach(d => d.cells.forEach(c => c.img && used.add(c.img)));
+  for (const k of await imageKeys()) if (!used.has(k)) { await delImage(k); imgs.delete(k); }
+}
+
+// ---------- boot ----------
+window.addEventListener('resize', () => fitCanvas());
+document.addEventListener('visibilitychange', () => { if (document.hidden && cur) saveNow(); });
+window.addEventListener('pagehide', () => { if (cur) saveNow(); });
+if (document.fonts) {
+  document.fonts.load('44px Huninn', '字').then(render).catch(() => {});
+  document.fonts.addEventListener && document.fonts.addEventListener('loadingdone', render);
+}
+
+(async () => {
+  buildLayoutRow();
+  buildStyleRow();
+  try { db = await openDB(); }
+  catch (e) { $('list').innerHTML = '<div class="empty">⚠️ 這個瀏覽器不能存草稿（可能是無痕模式）</div>'; return; }
+  try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch (e) {}
+  await cleanup();
+  await renderList();
+  const last = ls.get('editing');
+  if (last) { const d = await getDraft(last); if (d) openEditor(d, true); }
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+})();
+})();
+</script>
+</body>
+</html>
