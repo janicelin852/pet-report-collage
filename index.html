@@ -101,12 +101,12 @@ input[type=range]{flex:1;accent-color:var(--accent)}
       <button class="chip" data-gap="粗">粗</button>
     </div>
     <div class="row ctx" id="cellRow">
+      <button class="chip on" id="doneCell">✓ 完成</button>
+      <span class="sep"></span>
       <button class="chip" id="replaceBtn">換照片</button>
       <button class="chip" id="swapBtn">交換位置</button>
       <button class="chip" id="resetBtn">重設取景</button>
       <button class="chip warn" id="removeBtn">移除照片</button>
-      <span class="sep"></span>
-      <button class="chip on" id="doneCell">完成</button>
     </div>
   </div>
 </section>
@@ -645,7 +645,8 @@ function endPointer(e, cancelled) {
   if (g.type === 'pinch' || g.type === 'lpinch') { changed(); return; }
   if (g.type === 'cell') {
     if (g.moved) { changed(); return; }
-    if (cancelled || g.i < 0) return;
+    if (cancelled) return;
+    if (g.i < 0) { if (ui.sel >= 0) selectCell(-1); return; } // tapped a gap: deselect
     if (ui.swap && ui.sel >= 0) {
       if (g.i !== ui.sel) {
         const t = cur.cells[ui.sel]; cur.cells[ui.sel] = cur.cells[g.i]; cur.cells[g.i] = t;
@@ -659,6 +660,10 @@ function endPointer(e, cancelled) {
     else selectCell(ui.sel === g.i ? -1 : g.i);
   }
 }
+// tapping the grey area around the collage also deselects
+$('stage').addEventListener('pointerdown', e => {
+  if (e.target === $('stage') && ui.sel >= 0) selectCell(-1);
+});
 cv.addEventListener('pointerup', e => endPointer(e, false));
 cv.addEventListener('pointercancel', e => endPointer(e, true));
 
