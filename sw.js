@@ -1,5 +1,5 @@
 // Offline cache. Bump VERSION on every release so phones pick up the new files.
-const VERSION = 'v3';
+const VERSION = 'v4';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icons/icon-180.png', 'icons/icon-512.png', 'fonts/Huninn.ttf'];
 
 self.addEventListener('install', e => {
@@ -15,22 +15,22 @@ self.addEventListener('activate', e => {
   );
 });
 
+// Cache first, always: the app opens instantly even on a weak signal (clients' homes).
+// In the background, files are refreshed from the network for the next launch;
+// a new release (new VERSION) is picked up the next time the app is opened online.
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== location.origin) return;
-  // big static assets: cache first
-  if (url.pathname.endsWith('.ttf') || url.pathname.includes('/icons/')) {
-    e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
-    return;
-  }
-  // app shell: network first so updates land, cache when offline
   e.respondWith(
-    fetch(e.request)
-      .then(r => {
-        const copy = r.clone();
-        caches.open(VERSION).then(c => c.put(e.request, copy));
-        return r;
-      })
-      .catch(() => caches.match(e.request, { ignoreSearch: true }).then(r => r || caches.match('index.html')))
+    caches.match(e.request, { ignoreSearch: true }).then(hit => {
+      const net = fetch(e.request)
+        .then(r => {
+          if (r.ok) { const copy = r.clone(); caches.open(VERSION).then(c => c.put(e.request, copy)); }
+          return r;
+        })
+        .catch(() => null);
+      if (hit) { e.waitUntil(net); return hit; }
+      return net.then(r => r || caches.match('index.html'));
+    })
   );
 });
